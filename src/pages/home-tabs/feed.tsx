@@ -1,50 +1,123 @@
-import { 
-    IonButtons, 
-    IonContent, 
-    IonHeader, 
-    IonMenuButton, 
-    IonPage, 
-    IonTitle, 
-    IonToolbar } 
-from "@ionic/react";
+import {
+  IonButtons,
+  IonContent,
+  IonHeader,
+  IonMenuButton,
+  IonPage,
+  IonTitle,
+  IonToolbar,
+  IonCard,
+  IonCardHeader,
+  IonCardTitle,
+  IonCardContent,
+  IonImg,
+  IonSpinner,
+  IonRefresher,
+  IonRefresherContent,
+  IonText
+} from "@ionic/react";
+import { useEffect, useState } from "react";
 
+interface Post {
+  id: number;
+  title: string;
+  body: string;
+  image: string;
+}
 
-const Feed : React.FC = () => {
+const Feed: React.FC = () => {
+  const [posts, setPosts] = useState<Post[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-    return (
+  const fetchPosts = async () => {
+    try {
+      setError(null);
 
-        <IonPage>
-            <IonHeader>
-                <IonToolbar>
+      const res = await fetch(
+        "https://jsonplaceholder.typicode.com/posts?_limit=10"
+      );
 
-                    <IonButtons slot="start">
+      if (!res.ok) throw new Error("Failed to fetch data");
 
-                        <IonMenuButton></IonMenuButton>
-                    </IonButtons> 
+      const data = await res.json();
 
-                    <IonTitle>
-                        Template
+      const enriched = data.map((item: any) => ({
+        ...item,
+        image: `https://picsum.photos/seed/${item.id}/400/200`
+      }));
 
-                    </IonTitle>
+      setPosts(enriched);
+    } catch (err: any) {
+      setError(err.message || "Something went wrong");
+    } finally {
+      setLoading(false);
+    }
+  };
 
+  useEffect(() => {
+    fetchPosts();
+  }, []);
 
-                  
-                </IonToolbar>
-            </IonHeader>
+  const handleRefresh = async (event: CustomEvent) => {
+    await fetchPosts();
+    event.detail.complete();
+  };
 
-            <IonContent fullscreen> 
+  return (
+    <IonPage>
+      <IonHeader>
+        <IonToolbar>
+          <IonButtons slot="start">
+            <IonMenuButton />
+          </IonButtons>
 
-                <h1>Template</h1>
-            </IonContent>
+          <IonTitle>Feed</IonTitle>
+        </IonToolbar>
+      </IonHeader>
 
+      <IonContent fullscreen>
 
-        </IonPage>
+        {/* Pull to refresh */}
+        <IonRefresher slot="fixed" onIonRefresh={handleRefresh}>
+          <IonRefresherContent />
+        </IonRefresher>
 
+        <div className="ion-padding">
 
-    );
+          {/* Loading */}
+          {loading && <IonSpinner name="crescent" />}
 
+          {/* Error */}
+          {error && (
+            <IonText color="danger">
+              <p>{error}</p>
+            </IonText>
+          )}
 
+          {/* Posts */}
+          {!loading &&
+            !error &&
+            posts.map(post => (
+              <IonCard key={post.id} routerLink={`/feed/${post.id}`} button>
+
+                <IonImg src={post.image} alt={post.title} />
+
+                <IonCardHeader>
+                  <IonCardTitle>{post.title}</IonCardTitle>
+                </IonCardHeader>
+
+                <IonCardContent>
+                  {post.body}
+                </IonCardContent>
+
+              </IonCard>
+            ))}
+
+        </div>
+      </IonContent>
+    </IonPage>
+  );
 };
 
 export default Feed;
-
